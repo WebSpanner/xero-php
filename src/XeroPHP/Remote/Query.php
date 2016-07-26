@@ -3,7 +3,6 @@
 namespace XeroPHP\Remote;
 
 use XeroPHP\Application;
-use DateTime;
 
 class Query {
 
@@ -18,9 +17,6 @@ class Query {
     private $order;
     private $modifiedAfter;
     private $page;
-    private $fromDate;
-    private $toDate;
-    private $date;
     private $offset;
 
     public function __construct(Application $app) {
@@ -44,12 +40,46 @@ class Query {
     }
 
     /**
+     * Adds a WHERE statment to the query. Can also be used to chain an AND WHERE statement to
+     * a query.
+     *
      * @return $this
      */
     public function where() {
-        $args = func_get_args();
+        return $this->addWhere('AND', func_get_args());
+    }
 
-        if(func_num_args() === 2) {
+    /**
+     * Chains an OR WHERE statement on to the query
+     *
+     * @return $this
+     **/
+    public function orWhere() {
+        return $this->addWhere('OR', func_get_args());
+    }
+
+    /**
+     * Chains an AND WHERE statement on to the query.
+     * ( Note this method is effectively an alias for where() to help make fluent
+     * queries more readable and less ambiguous )
+     *
+     * @return $this
+     **/
+    public function andWhere() {
+        return $this->addWhere('AND', func_get_args());
+    }
+
+    /**
+     * @return $this
+     **/
+    public function addWhere($operator, $args)
+    {
+        // Add operator unless this is the first where statement
+        if (count($this->where) > 0) {
+            $this->where[] = $operator;
+        }
+
+        if(count($args) === 2) {
             if(is_bool($args[1])) {
                 $this->where[] = sprintf('%s=%s', $args[0], $args[1] ? 'true' : 'false');
             } elseif(is_int($args[1])) {
@@ -68,8 +98,15 @@ class Query {
         return $this;
     }
 
-    public function getWhere() {
-        return implode(' AND ', $this->where);
+    /**
+     * Concatenates the array of where statements stored in $this->where and returns
+     * them as a string
+     *
+     * @return $string
+     **/
+    public function getWhere()
+    {
+        return implode(' ', $this->where);
     }
 
     /**
@@ -94,33 +131,6 @@ class Query {
 
         $this->modifiedAfter = $modifiedAfter->format('c');
 
-        return $this;
-    }
-
-    /**
-     * @param DateTime $fromDate
-     * @return $this
-     */
-    public function fromDate(DateTime $fromDate) {
-        $this->fromDate = $fromDate->format('Y-m-d');
-        return $this;
-    }
-
-    /**
-     * @param DateTime $toDate
-     * @return $this
-     */
-    public function toDate(DateTime $toDate) {
-        $this->toDate = $toDate->format('Y-m-d');
-        return $this;
-    }
-
-    /**
-     * @param DateTime $date
-     * @return $this
-     */
-    public function date(DateTime $date) {
-        $this->date = $date->format('Y-m-d');
         return $this;
     }
 
@@ -161,7 +171,9 @@ class Query {
         $url = new URL($this->app, $from_class::getResourceURI(), $from_class::getAPIStem());
         $request = new Request($this->app, $url, Request::METHOD_GET);
 
+        // Concatenate where statements
         $where = $this->getWhere();
+
         if(!empty($where)) {
             $request->setParameter('where', $where);
         }
@@ -172,18 +184,6 @@ class Query {
 
         if($this->modifiedAfter !== null) {
             $request->setHeader('If-Modified-Since', $this->modifiedAfter);
-        }
-
-        if($this->fromDate !== null) {
-            $request->setParameter('fromDate', $this->fromDate);
-        }
-
-        if($this->toDate !== null) {
-            $request->setParameter('toDate', $this->toDate);
-        }
-
-        if($this->date !== null) {
-            $request->setParameter('date', $this->date);
         }
 
         if($this->page !== null) {
