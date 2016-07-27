@@ -32,7 +32,7 @@ abstract class Application {
         'curl'  => array(
             CURLOPT_USERAGENT      => 'XeroPHP',
             CURLOPT_CONNECTTIMEOUT => 30,
-            CURLOPT_TIMEOUT        => 20,
+            CURLOPT_TIMEOUT        => 240,
             CURLOPT_SSL_VERIFYPEER => 2,
             CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_FOLLOWLOCATION => false,
